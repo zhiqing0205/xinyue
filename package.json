@@ -8,7 +8,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "init-db": "node scripts/init-db.js"
+    "init-db": "node scripts/init-db.js",
+    "studio": "npx prisma studio"
   },
   "dependencies": {
     "@nuxt/content": "^3.5.1",
