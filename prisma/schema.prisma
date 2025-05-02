@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 管理员表 - 用于后台登录验证
+model Admin {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("admins")
+}
+
+// 初始页面祝福内容表 - 用于存储首屏祝福内容
+model Greeting {
+  id              Int      @id @default(autoincrement())
+  title           String
+  content         String
+  backgroundImage String?  @map("background_image") // 存储图床URL
+  textColor       String   @default("#ffffff") @map("text_color")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("greetings")
+}
+
+// 滚动内容区块表 - 用于存储苹果风格的滚动内容区块
+model ContentBlock {
+  id              Int      @id @default(autoincrement())
+  title           String?
+  subtitle        String?
+  content         String?
+  backgroundColor String   @default("#ffffff") @map("background_color")
+  textColor       String   @default("#000000") @map("text_color")
+  imageUrl        String?  @map("image_url") // 存储图床URL
+  imagePosition   String   @default("right") @map("image_position")
+  displayOrder    Int      @map("display_order")
+  animationType   String   @default("fade") @map("animation_type")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("content_blocks")
+}
+
+// 朋友圈动态表 - 用于存储仿微信朋友圈的历年动态
+model Moment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  eventDate DateTime @map("event_date")
+  location  String?
+  mood      String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  media     Media[]
+
+  @@map("moments")
+}
+
+// 媒体表 - 用于存储朋友圈动态中的图片
+model Media {
+  id           Int      @id @default(autoincrement())
+  momentId     Int?     @map("moment_id")
+  filePath     String   @map("file_path") // 存储图床URL
+  fileType     String   @map("file_type") // 'image', 'video'
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  moment       Moment?  @relation(fields: [momentId], references: [id], onDelete: SetNull)
+
+  @@map("media")
+}
