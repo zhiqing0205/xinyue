@@ -14,5 +14,10 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
       ]
     }
+  },
+  vite: {
+    server: {
+      allowedHosts: ['xinyue.best']
+    }
   }
 })
