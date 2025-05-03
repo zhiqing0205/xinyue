@@ -318,14 +318,14 @@ const handleScroll = () => {
   if (currentScrollY !== scrollY.value) {
     const direction = currentScrollY > scrollY.value ? 'down' : 'up';
     
-    // 如果方向发生变化，可能需要重新评估活动区块
-    if (direction !== lastScrollDirection) {
-      lastScrollDirection = direction;
+    // 检查是否已经滚动到内容区域底部
+    if (direction === 'down' && contentBlocksContainerRef.value) {
+      const containerBottom = contentBlocksContainerRef.value.offsetTop + contentBlocksContainerRef.value.offsetHeight;
+      const viewportBottom = currentScrollY + window.innerHeight;
       
-      // 向上滚动时，可能需要特殊处理
-      if (direction === 'up') {
-        // 找到当前视口中可见的区块
-        checkVisibleBlocks();
+      // 如果已经滚动到内容区域底部，并且即将进入故事部分，清除活动区块
+      if (viewportBottom >= containerBottom - 100) {
+        activeBlockId.value = null;
       }
     }
     
@@ -423,21 +423,14 @@ function setupScrollObservers() {
   // Observer for Content Blocks (Sticky Activation)
   const blockOptions = {
     root: null, // Viewport
-    // 扩大触发区域，使元素在进入视口底部时就开始检测
     rootMargin: '-10% 0px -40% 0px',
-    threshold: [0.1, 0.2, 0.3, 0.4, 0.5], // 保持多个阈值以提高精度
+    threshold: [0.1, 0.2, 0.3, 0.4, 0.5],
   };
 
   blockObserver = new IntersectionObserver((entries) => {
     // 获取当前滚动方向
     const currentScrollY = window.scrollY;
     const scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
-    
-    // 记录滚动方向变化
-    if (scrollDirection !== lastScrollDirection) {
-      console.log(`滚动方向变化: ${lastScrollDirection} -> ${scrollDirection}`);
-      lastScrollDirection = scrollDirection;
-    }
     
     // 更新上一次滚动位置
     lastScrollY = currentScrollY;
@@ -452,6 +445,23 @@ function setupScrollObservers() {
       if (scrollDirection === 'down') {
         // 向下滚动时，选择第一个进入视口的区块
         targetEntry = intersectingEntries[0];
+        
+        // 检查是否已经到达最后一个内容块
+        const targetIndex = parseInt(targetEntry.target.dataset.index || '0');
+        const isLastBlock = targetIndex === contentBlocks.value.length - 1;
+        
+        // 如果已经是最后一个区块，并且滚动位置超过了一定阈值，不再激活任何区块
+        if (isLastBlock) {
+          const rect = targetEntry.target.getBoundingClientRect();
+          const blockBottom = rect.bottom;
+          const viewportHeight = window.innerHeight;
+          
+          // 如果区块底部已经接近或超出视口底部，不再激活任何区块
+          if (blockBottom < viewportHeight * 0.3) {
+            console.log('已到达最后一个区块底部，停止激活');
+            return;
+          }
+        }
       } else {
         // 向上滚动时，选择最合适的区块
         // 获取所有区块的索引和位置信息
@@ -471,7 +481,6 @@ function setupScrollObservers() {
         blockInfo.sort((a, b) => b.index - a.index);
         
         // 然后在前几个区块中选择最接近视口中心的
-        // 只考虑索引最大的和次大的区块
         const topBlocks = blockInfo.slice(0, 2);
         if (topBlocks.length > 0) {
           // 在这些区块中选择最接近视口中心的
@@ -481,6 +490,8 @@ function setupScrollObservers() {
           targetEntry = intersectingEntries[intersectingEntries.length - 1];
         }
       }
+      
+      if (!targetEntry) return;
       
       const targetElement = targetEntry.target;
       const id = parseInt(targetElement.id.replace('block-', ''));
@@ -503,8 +514,6 @@ function setupScrollObservers() {
         el.classList.remove('active');
       }
     });
-
-
   }, blockOptions);
 
   // Observer for Moment Cards (Animation Trigger)
@@ -793,29 +802,29 @@ body {
   /* Height is set dynamically via :style binding */
 }
 
+/* 内容块过渡效果 */
 .content-block {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  opacity: 0.2;
+  transform: scale(0.9);
+  will-change: opacity, transform;
   position: sticky;
   top: 0;
   height: 100vh;
-  width: 100%;
-  overflow: hidden;
-  display: flex; /* Use flex on the block for alignment */
+  display: flex;
   align-items: center;
   justify-content: center;
-  /* --- Fade Transition --- */
-  opacity: 0.2; /* 降低非活动块的不透明度 */
-  transition: opacity 0.5s ease, transform 0.5s ease;
-  transform: scale(0.9); /* 缩小非活动块 */
-  will-change: opacity, transform;
-  /* --- Interaction Control --- */
-  pointer-events: none; /* Prevent interaction with inactive blocks */
 }
 
 .content-block.active {
   opacity: 1;
   transform: scale(1);
-  z-index: 2; /* Active block on top */
-  pointer-events: auto; /* Allow interaction with active block */
+}
+
+/* 确保内容区域有足够的底部空间 */
+.content-blocks {
+  position: relative;
+  padding-bottom: 20vh; /* 添加底部空间，防止最后一个区块滚动过快 */
 }
 
 .content-block-inner {
