@@ -1,7 +1,7 @@
 <template>
   <div class="main-container">
     <!-- Background Video/Fallback -->
-    <div class="video-container" :class="{ 'fixed': scrollY < storySectionOffsetTop }">
+    <div class="video-container" :class="{ 'fixed': shouldFixVideo }">
       <video ref="bgVideo" autoplay loop muted playsinline class="background-video" v-if="greeting?.backgroundVideo">
         <source :src="greeting.backgroundVideo" type="video/mp4">
         Your browser does not support the video tag.
@@ -113,6 +113,8 @@ const contentBlocks = ref([]);
 const moments = ref([]);
 const activeBlockId = ref(null); // ID of the currently centered/active content block
 const scrollY = ref(0);
+let lastScrollY = 0; // 跟踪上一次的滚动位置，用于确定滚动方向
+let lastScrollDirection = 'down'; // 跟踪上一次的滚动方向
 const storySectionOffsetTop = ref(0); // Top position of the moments section
 const contentBlocksContainerHeight = ref(null); // Dynamic height for sticky container
 
@@ -142,6 +144,13 @@ const scrollProgress = computed(() => {
 const scrollIndicatorOpacity = computed(() => {
   const fadeEndProgress = 0.6; // Fully faded after 60% scroll of first section
   return Math.max(0, 1 - scrollProgress.value / fadeEndProgress);
+});
+
+// Determine if video should remain fixed
+const shouldFixVideo = computed(() => {
+  // Keep video fixed until we scroll past the story section's top position
+  // Add a buffer of one viewport height to ensure video is still visible during transition
+  return scrollY.value < (storySectionOffsetTop.value + window.innerHeight);
 });
 
 // --- Lifecycle Hooks ---
@@ -303,8 +312,68 @@ function calculateLayout() {
 
 // Event Handlers
 const handleScroll = () => {
-  scrollY.value = window.scrollY;
+  const currentScrollY = window.scrollY;
+  
+  // 检测滚动方向变化
+  if (currentScrollY !== scrollY.value) {
+    const direction = currentScrollY > scrollY.value ? 'down' : 'up';
+    
+    // 如果方向发生变化，可能需要重新评估活动区块
+    if (direction !== lastScrollDirection) {
+      lastScrollDirection = direction;
+      
+      // 向上滚动时，可能需要特殊处理
+      if (direction === 'up') {
+        // 找到当前视口中可见的区块
+        checkVisibleBlocks();
+      }
+    }
+    
+    // 更新滚动位置
+    scrollY.value = currentScrollY;
+  }
 };
+
+// 检查当前可见的区块
+function checkVisibleBlocks() {
+  if (!contentBlocksRef.value || contentBlocksRef.value.length === 0) return;
+  
+  // 获取视口高度和中心点
+  const viewportHeight = window.innerHeight;
+  const viewportCenter = viewportHeight / 2;
+  
+  // 检查每个区块是否在视口中
+  const visibleBlocks = [];
+  
+  contentBlocksRef.value.forEach(el => {
+    if (!el) return;
+    
+    const rect = el.getBoundingClientRect();
+    // 计算元素中心点与视口中心的距离
+    const elementCenter = rect.top + rect.height / 2;
+    const distanceToCenter = Math.abs(elementCenter - viewportCenter);
+    
+    // 区块至少有一部分在视口中
+    if (rect.bottom > 0 && rect.top < viewportHeight) {
+      const id = parseInt(el.id.replace('block-', ''));
+      const index = parseInt(el.dataset.index || '0');
+      
+      visibleBlocks.push({ id, index, element: el, distanceToCenter });
+    }
+  });
+  
+  // 如果有可见区块，选择最接近视口中心的
+  if (visibleBlocks.length > 0) {
+    // 按照与视口中心的距离排序
+    visibleBlocks.sort((a, b) => a.distanceToCenter - b.distanceToCenter);
+    
+    const targetBlock = visibleBlocks[0];
+    if (targetBlock && activeBlockId.value !== targetBlock.id) {
+      console.log(`向上滚动检测到中心区块: ${targetBlock.id} (索引: ${targetBlock.index})`);
+      activeBlockId.value = targetBlock.id;
+    }
+  }
+}
 
 const handleVideoLoaded = () => {
   console.log('Video loaded.');
@@ -354,42 +423,86 @@ function setupScrollObservers() {
   // Observer for Content Blocks (Sticky Activation)
   const blockOptions = {
     root: null, // Viewport
-    // Defines the "sweet spot" - triggers when block is roughly between 30% from top and 30% from bottom
-    rootMargin: '-30% 0px -30% 0px',
-    threshold: 0.01, // Trigger even if only a small part enters/leaves the margin
+    // 扩大触发区域，使元素在进入视口底部时就开始检测
+    rootMargin: '-10% 0px -40% 0px',
+    threshold: [0.1, 0.2, 0.3, 0.4, 0.5], // 保持多个阈值以提高精度
   };
 
   blockObserver = new IntersectionObserver((entries) => {
+    // 获取当前滚动方向
+    const currentScrollY = window.scrollY;
+    const scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
+    
+    // 记录滚动方向变化
+    if (scrollDirection !== lastScrollDirection) {
+      console.log(`滚动方向变化: ${lastScrollDirection} -> ${scrollDirection}`);
+      lastScrollDirection = scrollDirection;
+    }
+    
+    // 更新上一次滚动位置
+    lastScrollY = currentScrollY;
 
-    // Find the entry that is currently intersecting the most centered area
-    const intersectingEntry = entries.find(entry => entry.isIntersecting);
+    // 找到当前在视口中的区块
+    const intersectingEntries = entries.filter(entry => entry.isIntersecting);
+    
+    if (intersectingEntries.length > 0) {
+      // 根据滚动方向选择合适的区块
+      let targetEntry;
+      
+      if (scrollDirection === 'down') {
+        // 向下滚动时，选择第一个进入视口的区块
+        targetEntry = intersectingEntries[0];
+      } else {
+        // 向上滚动时，选择最合适的区块
+        // 获取所有区块的索引和位置信息
+        const blockInfo = intersectingEntries.map(entry => {
+          const el = entry.target;
+          const index = parseInt(el.dataset.index || '0');
+          const rect = el.getBoundingClientRect();
+          // 计算元素中心点与视口中心的距离
+          const viewportCenter = window.innerHeight / 2;
+          const elementCenter = rect.top + rect.height / 2;
+          const distanceToCenter = Math.abs(elementCenter - viewportCenter);
+          
+          return { entry, index, distanceToCenter };
+        });
+        
+        // 首先按索引从大到小排序（优先选择后面的区块）
+        blockInfo.sort((a, b) => b.index - a.index);
+        
+        // 然后在前几个区块中选择最接近视口中心的
+        // 只考虑索引最大的和次大的区块
+        const topBlocks = blockInfo.slice(0, 2);
+        if (topBlocks.length > 0) {
+          // 在这些区块中选择最接近视口中心的
+          topBlocks.sort((a, b) => a.distanceToCenter - b.distanceToCenter);
+          targetEntry = topBlocks[0].entry;
+        } else {
+          targetEntry = intersectingEntries[intersectingEntries.length - 1];
+        }
+      }
+      
+      const targetElement = targetEntry.target;
+      const id = parseInt(targetElement.id.replace('block-', ''));
+      const index = parseInt(targetElement.dataset.index || '0');
 
-    if (intersectingEntry) {
-        const targetElement = intersectingEntry.target;
-        const id = parseInt(targetElement.id.replace('block-', ''));
-
-        // Check if the active block needs to change
-         if(activeBlockId.value !== id) {
-             console.log(`Activating Block: ${id}`);
-             activeBlockId.value = id; // Update the active ID
-         }
-    } else {
-         // Optional: If nothing is strictly in the center margin (e.g. scrolling fast),
-         // we might want to keep the last active ID or determine based on scroll direction.
-         // For simplicity, let's stick with the intersecting logic. If none intersect margin,
-         // activeBlockId remains, and CSS handles :not(.active) state.
+      // 检查是否需要更改活动区块
+      if (activeBlockId.value !== id) {
+        console.log(`激活区块: ${id} (索引: ${index}, 滚动方向: ${scrollDirection})`);
+        activeBlockId.value = id; // 更新活动ID
+      }
     }
 
-     // Update classes for all observed blocks based on the single activeBlockId
-     contentBlocksRef.value.forEach(el => {
-         if (!el) return;
-         const currentId = parseInt(el.id.replace('block-', ''));
-         if (currentId === activeBlockId.value) {
-             el.classList.add('active');
-         } else {
-             el.classList.remove('active');
-         }
-     });
+    // 更新所有观察区块的类
+    contentBlocksRef.value.forEach(el => {
+      if (!el) return;
+      const currentId = parseInt(el.id.replace('block-', ''));
+      if (currentId === activeBlockId.value) {
+        el.classList.add('active');
+      } else {
+        el.classList.remove('active');
+      }
+    });
 
 
   }, blockOptions);
@@ -534,6 +647,7 @@ body {
   height: 100vh;
   z-index: 0;
   overflow: hidden;
+  transition: opacity 0.5s ease; /* 添加平滑过渡 */
 }
 
 .video-container.fixed {
@@ -552,6 +666,7 @@ body {
   object-fit: cover;
   opacity: 0;
   transition: opacity 1.5s ease-in-out;
+  /* 确保视频在滚动时平滑过渡 */
 }
 
 .background-video.loaded {
@@ -688,14 +803,17 @@ body {
   align-items: center;
   justify-content: center;
   /* --- Fade Transition --- */
-  opacity: 0;
-  transition: opacity var(--transition-duration) ease-in-out;
+  opacity: 0.2; /* 降低非活动块的不透明度 */
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  transform: scale(0.9); /* 缩小非活动块 */
+  will-change: opacity, transform;
   /* --- Interaction Control --- */
   pointer-events: none; /* Prevent interaction with inactive blocks */
 }
 
 .content-block.active {
   opacity: 1;
+  transform: scale(1);
   z-index: 2; /* Active block on top */
   pointer-events: auto; /* Allow interaction with active block */
 }
