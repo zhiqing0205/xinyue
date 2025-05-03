@@ -97,7 +97,8 @@
 
       <!-- Footer -->
       <footer class="footer">
-        <p>With Love ❤️</p>
+        <p>© 2025 <span class="site-link">xinyue.best</span> 版权所有</p>
+        <p>欣玥就是最棒的！</p>
       </footer>
     </div>
   </div>
@@ -153,6 +154,19 @@ onMounted(async () => {
   await nextTick(); // Ensure DOM is updated after data fetch
 
   initializeStateAndListeners(); // Setup everything else
+  
+  // 为页脚添加鼠标移动特效
+  const footerText = document.querySelector('.footer p:last-child');
+  if (footerText) {
+    footerText.addEventListener('mousemove', (e) => {
+      const rect = footerText.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      
+      footerText.style.setProperty('--x', `${x}%`);
+      footerText.style.setProperty('--y', `${y}%`);
+    });
+  }
 });
 
 onBeforeUnmount(() => {
@@ -922,21 +936,101 @@ body {
 
 /* --- Footer --- */
 .footer {
+  padding: 2rem 0;
   text-align: center;
-  padding: 3rem 1rem;
-  background: linear-gradient(to bottom, var(--background-dark) 0%, #000000 100%); /* Dark gradient */
-  color: var(--text-muted); /* Muted text color */
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
-  z-index: 3;
+  overflow: hidden;
+}
+
+.footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  opacity: 0.7;
 }
 
 .footer p {
+  margin: 0.5rem auto;
   font-size: 0.95rem;
-  letter-spacing: 0.5px;
-   transition: color 0.3s ease;
+  transition: all 0.3s ease;
+  text-align: center;
+  width: 100%;
+  display: block;
 }
-.footer p:hover {
-    color: var(--text-light);
+
+.site-link, .footer p:last-child {
+  position: relative;
+  font-weight: 500;
+  background: linear-gradient(45deg, #ff9a9e, #fad0c4, #fbc2eb);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+  transition: all 0.5s ease;
+}
+
+.site-link {
+  padding: 0 5px;
+}
+
+.site-link:hover, .footer p:last-child:hover {
+  transform: translateY(-2px) scale(1.05);
+  text-shadow: 0 0 8px rgba(255, 154, 158, 0.5);
+}
+
+.site-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, #ff9a9e, #fad0c4);
+  transform: scaleX(0);
+  transition: transform 0.3s var(--easing);
+  transform-origin: right;
+}
+
+.site-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.footer p:last-child {
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 0.3rem 1rem;
+  border-radius: 20px;
+  position: relative;
+  margin-top: 0.8rem;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+
+/* 鼠标移动特效 */
+.footer p:last-child::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(251, 194, 235, 0.3), transparent 100px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 20px;
+  z-index: -1;
+}
+
+.footer p:last-child:hover::before {
+  opacity: 1;
 }
 
 
@@ -954,6 +1048,17 @@ body {
 @keyframes bounce {
   0%, 100% { transform: translateY(0) translateX(-50%); }
   50% { transform: translateY(-10px) translateX(-50%); }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 
