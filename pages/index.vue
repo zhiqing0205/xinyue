@@ -98,7 +98,7 @@
       <!-- Footer -->
       <footer class="footer">
         <p>© 2025 <span class="site-link">xinyue.best</span> 版权所有</p>
-        <p>欣玥就是最棒的！</p>
+        <p><span class="highlight-text">欣玥就是最棒的！</span></p>
       </footer>
     </div>
   </div>
@@ -156,7 +156,7 @@ onMounted(async () => {
   initializeStateAndListeners(); // Setup everything else
   
   // 为页脚添加鼠标移动特效
-  const footerText = document.querySelector('.footer p:last-child');
+  const footerText = document.querySelector('.footer .highlight-text');
   if (footerText) {
     footerText.addEventListener('mousemove', (e) => {
       const rect = footerText.getBoundingClientRect();
@@ -965,7 +965,7 @@ body {
   display: block;
 }
 
-.site-link, .footer p:last-child {
+.site-link {
   position: relative;
   font-weight: 500;
   background: linear-gradient(45deg, #ff9a9e, #fad0c4, #fbc2eb);
@@ -973,14 +973,11 @@ body {
   background-clip: text;
   color: transparent;
   display: inline-block;
+  padding: 0 5px;
   transition: all 0.5s ease;
 }
 
-.site-link {
-  padding: 0 5px;
-}
-
-.site-link:hover, .footer p:last-child:hover {
+.site-link:hover {
   transform: translateY(-2px) scale(1.05);
   text-shadow: 0 0 8px rgba(255, 154, 158, 0.5);
 }
@@ -1003,19 +1000,30 @@ body {
   transform-origin: left;
 }
 
-.footer p:last-child {
+/* 修改为内联元素，使特效只对文字生效 */
+.footer .highlight-text {
+  position: relative;
   font-weight: 600;
   font-size: 1.1rem;
+  background: linear-gradient(45deg, #ff9a9e, #fad0c4, #fbc2eb);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
   padding: 0.3rem 1rem;
   border-radius: 20px;
-  position: relative;
-  margin-top: 0.8rem;
   cursor: pointer;
   letter-spacing: 0.5px;
+  transition: all 0.5s ease;
 }
 
-/* 鼠标移动特效 */
-.footer p:last-child::before {
+.footer .highlight-text:hover {
+  transform: translateY(-2px) scale(1.05);
+  text-shadow: 0 0 8px rgba(255, 154, 158, 0.5);
+}
+
+/* 鼠标移动特效 - 只对文字部分生效 */
+.footer .highlight-text::before {
   content: '';
   position: absolute;
   top: 0;
@@ -1029,7 +1037,7 @@ body {
   z-index: -1;
 }
 
-.footer p:last-child:hover::before {
+.footer .highlight-text:hover::before {
   opacity: 1;
 }
 
