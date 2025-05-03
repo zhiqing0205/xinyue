@@ -35,7 +35,8 @@ async function main() {
       data: {
         title: '生日快乐!',
         content: '亲爱的，祝你生日快乐！这个特别的日子里，我想对你说...',
-        backgroundImage: 'https://img.ziuch.top/i/2025/05/02/rdi9hb.jpg', // 使用图床URL
+        backgroundVideo: 'https://img.ziuch.top/i/2025/05/02/rdi9hb.mp4', // 使用视频URL
+        profileImage: 'https://img.ziuch.top/i/2025/05/02/rdi9hb.jpg', // 使用头像图片URL
         isActive: true
       }
     })

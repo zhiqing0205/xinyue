@@ -2,8 +2,8 @@
   <div class="main-container">
     <!-- Background Video/Fallback -->
     <div class="video-container" :class="{ 'fixed': scrollY < storySectionOffsetTop }">
-      <video ref="bgVideo" autoplay loop muted playsinline class="background-video" v-if="greeting?.backgroundImage">
-        <source :src="greeting.backgroundImage" type="video/mp4">
+      <video ref="bgVideo" autoplay loop muted playsinline class="background-video" v-if="greeting?.backgroundVideo">
+        <source :src="greeting.backgroundVideo" type="video/mp4">
         Your browser does not support the video tag.
       </video>
       <div v-else class="fallback-background"></div>
@@ -15,6 +15,9 @@
       <!-- Greeting Section -->
       <section class="greeting-section" ref="greetingSection" v-if="greeting">
         <div class="greeting-content" :style="{ color: greeting.textColor || '#ffffff' }" ref="greetingContent">
+          <div class="profile-image-container" v-if="greeting.profileImage">
+            <img class="profile-image" :src="greeting.profileImage" alt="Profile Image">
+          </div>
           <h1 class="greeting-title" ref="greetingTitle">{{ greeting.title }}</h1>
           <p class="greeting-text" ref="greetingText"></p>
         </div>
@@ -226,7 +229,9 @@ function initializeStateAndListeners() {
 
   // Start typewriter effect
   if (greeting.value?.content && greetingText.value) {
-    typeWriter(greeting.value.content, 0);
+    setTimeout(() => {
+      typeWriter(greeting.value.content, 0);
+    }, 150); // Delay to ensure content is rendered before starting typewriter
   } else {
         // If no typewriter, make scroll indicator visible immediately if needed
         if (scrollIndicator.value && contentBlocks.value.length > 0) {
@@ -320,7 +325,7 @@ function typeWriter(text, index) {
   if (!greetingText.value) return;
   if (index < text.length) {
     greetingText.value.innerHTML += text.charAt(index);
-    setTimeout(() => typeWriter(text, index + 1), 55); // Slightly slower typing
+    setTimeout(() => typeWriter(text, index + 1), 80); // Slightly slower typing
   } else {
     // Typing finished
     if (scrollIndicator.value) {
@@ -991,5 +996,46 @@ body {
   .moment-text { font-size: 0.9rem; }
   .moment-date { font-size: 0.8rem; }
 }
+
+/* 添加圆形头像样式 */
+.profile-image-container {
+  width: clamp(150px, 10vw, 220px);
+  height: clamp(150px, 10vw, 220px);
+  margin: 0 auto 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow-medium);
+  transition: transform 0.5s var(--easing);
+  position: relative;
+  z-index: 2;
+}
+
+.profile-image-container:hover {
+  transform: scale(1.05);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow-dark);
+}
+
+.profile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.8s var(--easing);
+}
+
+.profile-image:hover {
+  transform: scale(1.08);
+}
+
+/* 在小屏幕上调整头像大小 */
+@media (max-width: 768px) {
+  .profile-image-container {
+    width: clamp(120px, 15vw, 180px);
+    height: clamp(120px, 15vw, 180px);
+    margin-bottom: 20px;
+  }
+}
+
 
 </style>

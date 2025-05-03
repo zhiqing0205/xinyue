@@ -25,7 +25,8 @@ model Greeting {
   id              Int      @id @default(autoincrement())
   title           String
   content         String
-  backgroundImage String?  @map("background_image") // 存储图床URL
+  backgroundVideo String?  @map("background_video") // 存储视频URL
+  profileImage    String?  @map("profile_image") // 存储头像图片URL，显示为圆形
   textColor       String   @default("#ffffff") @map("text_color")
   isActive        Boolean  @default(true) @map("is_active")
   createdAt       DateTime @default(now()) @map("created_at")

@@ -9,7 +9,8 @@ export default defineEventHandler(async (event) => {
       data: {
         title: data.title,
         content: data.content,
-        backgroundImage: data.background_image,
+        backgroundVideo: data.background_video,
+        profileImage: data.profile_image,
         textColor: data.text_color,
         isActive: data.is_active !== undefined ? data.is_active : true
       }
