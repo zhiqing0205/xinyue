@@ -63,37 +63,7 @@
       </div>
 
       <!-- Moments/Story Section (Redesigned) -->
-      <section class="moments-section" v-if="moments.length > 0" ref="storySection" id="story-section">
-        <h2 class="section-title">Our Story</h2>
-        <div class="timeline">
-          <!-- Vertical Line -->
-          <div class="timeline-line"></div>
-          <!-- Moment Cards -->
-          <div
-            v-for="moment in moments"
-            :key="moment.id"
-            class="moment-entry"
-            :id="`moment-${moment.id}`"
-            ref="momentCards"
-          >
-            <div class="moment-dot"></div>
-            <div class="moment-card">
-              <div class="moment-card-header">
-                <span class="moment-date">{{ formatFullDate(moment.eventDate) }}</span>
-              </div>
-              <div class="moment-card-body">
-                <div class="moment-text" v-html="moment.content"></div>
-                <div v-if="moment.media && moment.media.length" class="moment-media">
-                    <div v-for="media in moment.media" :key="media.id" class="media-item">
-                        <img v-if="media.fileType === 'image'" :src="media.filePath" :alt="`Moment media ${media.id}`" loading="lazy">
-                        <video v-else-if="media.fileType === 'video'" controls :src="media.filePath" preload="metadata"></video>
-                    </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <StoryCarousel v-if="moments.length > 0" :moments="moments" ref="storySection" />
 
       <!-- Footer -->
       <footer class="footer">
@@ -106,6 +76,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick, computed } from 'vue';
+import StoryCarousel from '~/components/StoryCarousel.vue';
 
 // --- Reactive State ---
 const greeting = ref(null);
@@ -284,9 +255,9 @@ function initializeStateAndListeners() {
 
 function calculateLayout() {
     // Calculate story section offset
-    if (storySection.value) {
-        // Get distance from the top of the document
-        let element = storySection.value;
+    if (storySection.value && storySection.value.$el) {
+        // 获取组件的根元素
+        let element = storySection.value.$el;
         let offset = 0;
         do {
           offset += element.offsetTop || 0;
