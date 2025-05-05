@@ -78,6 +78,10 @@
 import { ref, onMounted, onBeforeUnmount, nextTick, computed } from 'vue';
 import StoryCarousel from '~/components/StoryCarousel.vue';
 
+useSeoMeta({
+  title: 'Xinyue\'s Story'
+})
+
 // --- Reactive State ---
 const greeting = ref(null);
 const contentBlocks = ref([]);
