@@ -852,7 +852,12 @@ const currentMoment = computed(() => {
 }
 
 @media (max-width: 1200px) {
-    .year-display-container {
+
+    .carousel-outer-container {
+    flex-direction: column;
+  }
+
+  .year-display-container {
     display: none;
   }
   
