@@ -4,13 +4,13 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev",
+    "dev": "npx prisma generate && nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "init-db": "node scripts/init-db.js",
     "studio": "npx prisma studio",
-    "run": "nuxt build && node .output/server/index.mjs"
+    "run": "nuxt build && DATABASE_URL='file:./dev.db' && node .output/server/index.mjs"
   },
   "dependencies": {
     "@nuxt/content": "^3.5.1",
