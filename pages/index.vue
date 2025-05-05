@@ -1174,6 +1174,10 @@ body {
     flex-direction: column;
     padding: 3rem 5%;
     text-align: center; /* Center text on mobile */
+    justify-content: center; /* 垂直居中内容 */
+    align-items: center; /* 水平居中内容 */
+    min-height: 100vh; /* 确保容器高度足够 */
+    display: flex; /* 确保flex布局生效 */
   }
 
   .block-text, .block-image {
@@ -1181,18 +1185,29 @@ body {
     padding-right: 0;
     flex-basis: auto;
     transform: translateX(0); /* Reset transform base for column layout */
+    display: flex; /* 添加flex布局 */
+    flex-direction: column; /* 垂直排列子元素 */
+    justify-content: center; /* 垂直居中 */
+    align-items: center; /* 水平居中 */
   }
-    .block-text { order: 2; margin-top: 2rem; }
-    .block-image { order: 1; }
+  
+  .block-text { 
+    order: 2; 
+    margin-top: -300px; 
+  }
+  
+  .block-image { 
+    order: 1; 
+  }
 
   /* Adjust timeline line/dot position for smaller screens */
   .timeline-line { left: 8px; }
   .moment-entry { padding-left: 30px; }
   .moment-dot { left: -2px; width: 19px; height: 19px; border-width: 3px; }
 
-   .moment-media {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Smaller grid items */
-   }
+  .moment-media {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Smaller grid items */
+  }
 }
 
 @media (max-width: 480px) {
