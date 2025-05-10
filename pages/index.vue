@@ -115,10 +115,56 @@ const scrollProgress = computed(() => {
   return sectionHeight > 0 ? Math.min(1, Math.max(0, scrollY.value / sectionHeight)) : 0;
 });
 
-// Opacity for the scroll indicator (fades out as user scrolls down the first section)
+// Opacity for the scroll indicator
 const scrollIndicatorOpacity = computed(() => {
-  const fadeEndProgress = 0.6; // Fully faded after 60% scroll of first section
-  return Math.max(0, 1 - scrollProgress.value / fadeEndProgress);
+  const storyEl = storySection.value?.$el;
+
+  // Fallback: StoryCarousel is not rendered or its position is not yet calculated
+  if (!storyEl || storySectionOffsetTop.value === 0) {
+    if (!greetingSection.value) return 0; // Should not happen if greeting is always there
+    const greetingHeight = greetingSection.value.offsetHeight;
+    // If greetingHeight is 0 (e.g., not rendered yet), keep indicator visible
+    if (greetingHeight === 0) return 1;
+
+    // Original fade logic: fade out during scroll of greetingSection
+    const progressInGreeting = Math.min(1, Math.max(0, scrollY.value / greetingHeight));
+    const fadeOutCompletesAtProgress = 0.6; // Original: fades out after 60% scroll of greeting
+    return Math.max(0, 1 - progressInGreeting / fadeOutCompletesAtProgress);
+  }
+
+  // New logic: Fade out as StoryCarousel appears
+  // Fade starts when the top of StoryCarousel enters the bottom of the viewport
+  const fadeStartScrollY = storySectionOffsetTop.value - window.innerHeight;
+
+  // Fade completes when the top of StoryCarousel reaches the middle of the viewport
+  const fadeEndScrollY = storySectionOffsetTop.value - (window.innerHeight / 2);
+
+  // Fade duration in terms of scroll pixels
+  const fadeDuration = fadeEndScrollY - fadeStartScrollY;
+
+  // Handle edge case where fadeDuration might be zero or negative
+  // (e.g., if window.innerHeight is very small or storySectionOffsetTop is unusual)
+  if (fadeDuration <= 0) {
+      // If StoryCarousel's top is already past mid-screen relative to its appearance point,
+      // or if calculation is problematic, determine visibility based on current scroll relative to start.
+      return scrollY.value < fadeStartScrollY ? 1 : 0;
+  }
+
+  // Before StoryCarousel starts appearing significantly
+  if (scrollY.value < fadeStartScrollY) {
+    return 1; // Fully visible
+  }
+
+  // After StoryCarousel's top has passed the viewport midpoint (or fade end point)
+  if (scrollY.value >= fadeEndScrollY) {
+    return 0; // Fully faded
+  }
+
+  // Calculate fade progress during the transition
+  const scrollPastFadeStart = scrollY.value - fadeStartScrollY;
+  const fadeProgress = scrollPastFadeStart / fadeDuration; // Value between 0 and 1
+
+  return 1 - fadeProgress; // Opacity decreases as fadeProgress increases
 });
 
 // Determine if video should remain fixed
@@ -732,7 +778,7 @@ body {
 }
 
 .scroll-indicator {
-  position: absolute;
+  /* position: absolute; */
   bottom: 35px;
   left: 50%;
   transform: translateX(-50%);
@@ -744,6 +790,16 @@ body {
   transition: opacity 0.5s ease, transform 0.3s ease;
   pointer-events: none; /* Initially non-interactive */
   animation: bounce 2.5s infinite ease-in-out 1s; /* Start bounce after delay */
+}
+
+.scroll-indicator {
+  position: fixed;
+  /* bottom: 20px; 或您希望的底部距离 */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000; /* 确保在其他内容之上 */
+  /* 其他现有样式，如颜色、动画等 */
+  transition: opacity 0.3s ease-in-out; /* 平滑的透明度过渡 */
 }
 
 .scroll-indicator.visible-initial {
