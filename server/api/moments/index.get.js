@@ -6,8 +6,8 @@ export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
     const orderBy = query.order === 'event_date' 
-      ? { eventDate: 'desc' } 
-      : { createdAt: 'desc' }
+      ? { eventDate: 'asc' } 
+      : { createdAt: 'asc' }
     
     // 获取所有朋友圈动态
     const moments = await prisma.moment.findMany({
