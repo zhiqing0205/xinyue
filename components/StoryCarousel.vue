@@ -59,10 +59,14 @@
                 loading="lazy"
               >
               <video 
+                :ref="el => { if (el) videoRefs[index] = el; else delete videoRefs[index]; }"
                 v-else-if="moment.media && moment.media.length && moment.media[0].fileType === 'video'" 
-                controls 
                 :src="moment.media[0].filePath"
                 preload="metadata"
+                @play="handleCarouselVideoPlay(index)"
+                @ended="handleCarouselVideoEnded(index)"
+                @click.stop="openLightbox(moment.media[0])"
+                controls
               ></video>
               <div v-else class="no-image">
                 <span>暂无图片</span>
@@ -167,6 +171,11 @@ const touchStartX = ref(0);
 const touchEndX = ref(0);
 const autoplayStarted = ref(false);
 
+// 新增：用于存储视频元素的引用
+const videoRefs = ref({});
+// 新增：标记当前轮播内的视频是否正在播放
+const activeVideoPlaying = ref(false);
+
 // 新增：用于存储 Intersection Observer 实例
 let observer = null;
 
@@ -192,11 +201,20 @@ const formatYearLastTwo = (dateString) => {
 
 // --- Autoplay Logic ---
 const startAutoplay = () => {
-  // a. 检查是否已经在运行或启动中
   if (autoplayInterval.value || autoplayStarted.value) {
-      console.log('自动轮播已在运行或启动中。');
+    return;
+  }
+  // 如果当前幻灯片中的视频正在播放或尚未结束，则不启动轮播
+  if (activeVideoPlaying.value) {
+    console.log('轮播内视频正在播放，不启动自动轮播。');
+    return;
+  }
+  const currentVideo = currentSlideVideoElement.value;
+  if (currentVideo && !currentVideo.ended && !currentVideo.paused) {
+      console.log('当前幻灯片视频尚未结束，不启动自动轮播。');
       return;
   }
+
   console.log('IntersectionObserver: Starting autoplay');
   autoplayStarted.value = true;
   autoplayInterval.value = setInterval(() => {
@@ -367,6 +385,124 @@ const currentMoment = computed(() => {
   if (!props.moments || props.moments.length === 0) return null;
   return props.moments[currentIndex.value];
 });
+
+// 新增：计算当前幻灯片中的视频元素
+const currentSlideVideoElement = computed(() => {
+  if (props.moments && props.moments.length > 0 && currentIndex.value >= 0 && currentIndex.value < props.moments.length) {
+    const moment = props.moments[currentIndex.value];
+    if (moment.media && moment.media.length > 0 && moment.media[0].fileType === 'video') {
+      return videoRefs.value[currentIndex.value];
+    }
+  }
+  return null;
+});
+
+// 新增：轮播内视频事件处理
+const handleCarouselVideoPlay = (index) => {
+  if (index === currentIndex.value) {
+    console.log(`轮播内索引 ${index} 的视频开始播放。`);
+    stopAutoplay(); // 停止轮播的自动播放间隔
+    activeVideoPlaying.value = true;
+  }
+};
+
+const handleCarouselVideoEnded = (index) => {
+  if (index === currentIndex.value) {
+    console.log(`轮播内索引 ${index} 的视频播放结束。`);
+    activeVideoPlaying.value = false;
+    if (!lightboxActive.value) { // 如果灯箱未激活
+      startAutoplay(); // 尝试启动轮播的自动播放
+    }
+  }
+};
+
+
+// --- Lifecycle Hooks ---
+onMounted(() => {
+  // 配置 Intersection Observer
+  const options = {
+    root: null, // 相对于浏览器视口
+    rootMargin: '0px',
+    threshold: 0.75 // 关键：阈值为 1.0 表示元素完全可见时触发
+  };
+  // 创建 Observer 回调函数
+  const callback = (entries) => {
+    entries.forEach(entry => {
+      // entry.isIntersecting 在 threshold 为 1.0 时，
+      // 表示元素至少有 100% 出现在视口中（即完全可见）
+      if (entry.isIntersecting && entry.intersectionRatio >= options.threshold) {
+        // 元素完全可见
+        console.log('组件完全可见，开始轮播');
+        startAutoplay();
+      } else {
+        // 元素不再完全可见（或者从未完全可见）
+        // 只有当之前正在轮播时才需要停止
+        if (autoplayStarted.value) {
+          console.log('组件不再完全可见，停止轮播');
+          stopAutoplay();
+        }
+      }
+    });
+  };
+  // 创建并启动 Observer
+  observer = new IntersectionObserver(callback, options);
+  // --- 修改这里 ---
+  if (carouselContainer.value) { // 检查 carouselContainer 是否存在
+    observer.observe(carouselContainer.value); // 开始观察 carouselContainer
+    console.log('IntersectionObserver is observing the carousel container.'); // 更新日志
+  } else {
+    console.error('Carousel container ref not found on mount for IntersectionObserver.'); // 更新错误日志
+  }
+});
+onBeforeUnmount(() => {
+  // 组件销毁前停止轮播并断开观察
+  stopAutoplay();
+  if (observer) {
+    observer.disconnect(); // 停止观察所有目标
+    console.log('IntersectionObserver disconnected.');
+  }
+});
+// --- Watcher ---
+watch(currentIndex, (newIndex, oldIndex) => {
+  // 暂停上一个幻灯片中的视频（如果正在播放）
+  if (oldIndex !== undefined && oldIndex !== newIndex) {
+    const oldVideo = videoRefs.value[oldIndex];
+    if (oldVideo && !oldVideo.paused) {
+      oldVideo.pause();
+    }
+  }
+  activeVideoPlaying.value = false; // 为新幻灯片重置状态
+
+  const newMoment = props.moments[newIndex];
+  if (newMoment?.media?.[0]?.fileType === 'video') {
+    stopAutoplay(); // 当视频幻灯片激活时，停止轮播的自动播放
+    // Vue 的 nextTick 确保 DOM 更新后再操作 video 元素
+    nextTick(() => {
+        const videoElement = videoRefs.value[newIndex];
+        if (videoElement) {
+            videoElement.play().catch(error => console.error("轮播内视频播放失败:", error));
+            // video 元素的 @play 事件会设置 activeVideoPlaying.value = true 并再次确认 stopAutoplay()
+        }
+    });
+  } else {
+    // 如果新幻灯片不是视频，并且灯箱未激活，则尝试启动自动轮播
+    if (!lightboxActive.value) {
+      startAutoplay();
+    }
+  }
+});
+
+watch(() => props.moments, () => {
+  currentIndex.value = 0;
+  // 当数据变化时，如果元素仍然可见，Intersection Observer 会确保轮播状态正确
+  // 无需手动调用 stop/start
+}, { deep: true });
+
+// // 计算当前显示的moment
+// const currentMoment = computed(() => {
+//   if (!props.moments || props.moments.length === 0) return null;
+//   return props.moments[currentIndex.value];
+// });
 
 </script>
 
